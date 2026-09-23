@@ -682,7 +682,7 @@ jobs:
   create_release:
     name: Create Release
     runs-on: ubuntu-24.04
-    needs: [prepare, build, build_android]
+    needs: [prepare, build]
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v8
@@ -700,7 +700,6 @@ jobs:
           cp "siyuan-mac.dmg/siyuan-${VERSION}-mac.dmg" release-assets/
           cp "siyuan-mac-arm64.dmg/siyuan-${VERSION}-mac-arm64.dmg" release-assets/
           cp "siyuan-win.exe/siyuan-${VERSION}-win.exe" release-assets/
-          cp "siyuan-android/siyuan-${VERSION}.apk" release-assets/
 
           EXPECTED_ASSETS=(
             "siyuan-${VERSION}-linux.AppImage"
@@ -710,7 +709,6 @@ jobs:
             "siyuan-${VERSION}-mac.dmg"
             "siyuan-${VERSION}-mac-arm64.dmg"
             "siyuan-${VERSION}-win.exe"
-            "siyuan-${VERSION}.apk"
           )
           for asset in "${EXPECTED_ASSETS[@]}"; do
             test -s "release-assets/${asset}"
@@ -765,7 +763,6 @@ jobs:
             "siyuan-${VERSION}-mac.dmg"
             "siyuan-${VERSION}-mac-arm64.dmg"
             "siyuan-${VERSION}-win.exe"
-            "siyuan-${VERSION}.apk"
             "SHA256SUMS.txt"
           )
           declare -A EXPECTED_DIGESTS
