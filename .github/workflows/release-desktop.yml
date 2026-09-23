@@ -1,0 +1,136 @@
+# fork 专用：仅构建桌面三平台（Windows/macOS/Linux）可执行文件
+# 官方 cd.yml 因绑定官方 siyuan-android 版本与签名密钥，fork 单独改版本时无法跑通。
+# 本 workflow 去掉 Android、E2E、契约检查等，只做前端构建 + 内核构建 + electron 打包，
+# 产物直接上传为 Actions artifact，可按需手动触发或打 beta/rc tag 触发。
+name: Release Desktop (fork)
+
+on:
+  push:
+    tags:
+      - '*-alpha*'
+      - '*-beta*'
+      - '*-rc*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.config.os }}
+    name: ${{ matrix.config.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - os: ubuntu-24.04
+            name: linux
+            kernel_path: "kernel-linux/SiYuan-Kernel"
+            goos: "linux"
+            goarch: "amd64"
+            electron_args: "dist-linux"
+            need_mingw: false
+          - os: macos-latest
+            name: mac.dmg
+            kernel_path: "kernel-darwin/SiYuan-Kernel"
+            goos: "darwin"
+            goarch: "amd64"
+            electron_args: "dist-darwin"
+            need_mingw: false
+          - os: macos-latest
+            name: mac-arm64.dmg
+            kernel_path: "kernel-darwin-arm64/SiYuan-Kernel"
+            goos: "darwin"
+            goarch: "arm64"
+            electron_args: "dist-darwin-arm64"
+            need_mingw: false
+          - os: windows-latest
+            name: win.exe
+            kernel_path: "kernel/SiYuan-Kernel.exe"
+            goos: "windows"
+            goarch: "amd64"
+            electron_args: "dist"
+            need_mingw: true
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: kernel/go.mod
+          cache-dependency-path: kernel/go.sum
+          cache: true
+
+      - name: Set up MingGW
+        if: matrix.config.need_mingw
+        uses: msys2/setup-msys2@v2
+        with:
+          install: p7zip mingw-w64-x86_64-lua
+
+      - name: Set up goversioninfo
+        if: matrix.config.need_mingw
+        run: |
+          go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest
+          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+        working-directory: kernel
+        env:
+          GO111MODULE: on
+          CGO_ENABLED: 1
+          GOOS: ${{ matrix.config.goos }}
+          GOARCH: ${{ matrix.config.goarch }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Set up pnpm (version from package.json)
+        uses: pnpm/action-setup@v4
+
+      - name: Cache pnpm store
+        uses: actions/cache@v5
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('app/pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+
+      - name: Install frontend dependencies
+        run: pnpm install --no-frozen-lockfile
+        working-directory: app
+
+      - name: Install Electron binary
+        run: pnpm run install:electron
+        working-directory: app
+
+      - name: Build UI
+        run: pnpm run build
+        working-directory: app
+
+      - name: Clean stale build and kernel directories
+        run: |
+          rm -rf ${{ github.workspace }}/app/build
+          rm -rf ${{ github.workspace }}/app/kernel*
+        shell: bash
+
+      - name: Generate Windows version resource
+        if: matrix.config.need_mingw
+        run: goversioninfo -platform-specific=true -icon="resource\icon.ico" -manifest="resource\goversioninfo.exe.manifest"
+        working-directory: kernel
+
+      - name: Build kernel
+        run: go build -tags "fts5 sqlcipher" -o "${{ github.workspace }}/app/${{ matrix.config.kernel_path }}" -ldflags "-s -w -X github.com/${{ github.repository }}/kernel/util.Mode=prod"
+        working-directory: kernel
+        env:
+          GO111MODULE: on
+          CGO_ENABLED: 1
+          GOOS: ${{ matrix.config.goos }}
+          GOARCH: ${{ matrix.config.goarch }}
+
+      - name: Package Electron app
+        run: pnpm run ${{ matrix.config.electron_args }}
+        working-directory: app
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-desktop-${{ matrix.config.name }}
+          path: app/build/*
+          if-no-files-found: error
