@@ -82,8 +82,10 @@ jobs:
         with:
           node-version: 24
 
-      - name: Set up pnpm (version from package.json)
+      - name: Set up pnpm (version from app/package.json)
         uses: pnpm/action-setup@v4
+        with:
+          package_json_file: app/package.json
 
       - name: Cache pnpm store
         uses: actions/cache@v5
