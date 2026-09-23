@@ -1,15 +1,10 @@
 # fork 专用：仅构建桌面三平台（Windows/macOS/Linux）可执行文件
 # 官方 cd.yml 因绑定官方 siyuan-android 版本与签名密钥，fork 单独改版本时无法跑通。
 # 本 workflow 去掉 Android、E2E、契约检查等，只做前端构建 + 内核构建 + electron 打包，
-# 产物直接上传为 Actions artifact，可按需手动触发或打 beta/rc tag 触发。
+# 产物汇总后自动发布到 GitHub Release，仅支持手动触发（Actions 页面点 Run workflow）。
 name: Release Desktop (fork)
 
 on:
-  push:
-    tags:
-      - '*-alpha*'
-      - '*-beta*'
-      - '*-rc*'
   workflow_dispatch:
 
 jobs:

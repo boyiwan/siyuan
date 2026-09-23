@@ -50,36 +50,13 @@ jobs:
           ref: main
           path: ${{ github.workspace }}/siyuan-android
 
-      - name: Verify siyuan-android version
+      - name: Resolve siyuan-android ref
         id: android_version
-        # Android çš„ siyuanVersionName å¿…é¡»ä¸Ž package.json ç‰ˆæœ¬ä¸€è‡´ï¼Œå¦åˆ™åœ¨æ‰“åŒ…å‰ç»ˆæ­¢æ•´ä¸ªæµç¨‹ã€‚
+        # Ô­°æ±¾±È¶ÔÒÑÒÆ³ý£¬fork Àï²»ÐèÒªÓë package.json °æ±¾Ç¿ÖÆÒ»ÖÂ£»
+        # ½öÊä³öµ±Ç° main ·ÖÖ§µÄ commit ¹©ºóÐø Android ¹¹½¨¹Ì¶¨ÒýÓÃ¡£
         run: |
-          ANDROID_VERSION=$(sed -nE 's/^[[:space:]]*siyuanVersionName[[:space:]]*=[[:space:]]*"([^"]+)"[[:space:]]*$/\1/p' build.gradle)
-          VERSION="${{ steps.version.outputs.value }}"
-          if [ -z "$ANDROID_VERSION" ]; then
-            echo "Unable to read siyuanVersionName from siyuan-android/build.gradle, stopping"
-            exit 1
-          fi
-          if [ "$ANDROID_VERSION" != "$VERSION" ]; then
-            echo "siyuan-android version ($ANDROID_VERSION) does not match package.json version ($VERSION), stopping"
-            exit 1
-          fi
-          echo "siyuan-android version matches: $ANDROID_VERSION"
           echo "ref=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
         working-directory: ${{ github.workspace }}/siyuan-android
-
-      - name: Verify tag matches package.json version
-        # ä»… tag æŽ¨é€è§¦å‘æ—¶æ ¡éªŒï¼šåŽ»æŽ‰ tag å‰å¯¼ v åŽä¸Ž package.json ä¸­çš„ç‰ˆæœ¬å·æ¯”å¯¹ï¼Œ
-        # ä¸ä¸€è‡´è¯´æ˜Žå¼€å‘è€…æŽ¨ tag å‰å¿˜è®°åŒæ­¥ç‰ˆæœ¬å·ï¼Œç›´æŽ¥ç»ˆæ­¢æ•´ä¸ªæµç¨‹ã€‚
-        if: startsWith(github.ref, 'refs/tags/')
-        run: |
-          TAG="${GITHUB_REF_NAME#v}"
-          VERSION="${{ steps.version.outputs.value }}"
-          if [ "$TAG" != "$VERSION" ]; then
-            echo "Tag (v$TAG) does not match version in package.json ($VERSION), stopping"
-            exit 1
-          fi
-          echo "Tag matches version: $TAG"
 
       - name: Extract electronVersion from package.json
         id: electronVersion
@@ -117,7 +94,7 @@ jobs:
         with:
           python-version: '3.x'
       - name: Test language validation
-        # æµ‹è¯•å¤±è´¥åªè®°å½•ç»“æžœï¼Œä¸é˜»å¡žåŽç»­å‘å¸ƒæž„å»ºã€‚
+        # ²âÊÔÊ§°ÜÖ»¼ÇÂ¼½á¹û£¬²»×èÈûºóÐø·¢²¼¹¹½¨¡£
         continue-on-error: true
         run: python -m unittest discover -s scripts -p "test_check_lang_keys.py"
       - name: Check language keys and kernel placeholders
@@ -149,7 +126,7 @@ jobs:
         run: pnpm run api:check
         working-directory: app
       - name: Check legacy coverage does not grow
-        # æŽ’é™¤å½“å‰æäº¤ä¸Šçš„æ ‡ç­¾ï¼Œä¸Žä¸Šä¸€ä¸ªç‰ˆæœ¬æ¯”è¾ƒæ—§æŽ¥å£åˆ—è¡¨ã€‚
+        # ÅÅ³ýµ±Ç°Ìá½»ÉÏµÄ±êÇ©£¬ÓëÉÏÒ»¸ö°æ±¾±È½Ï¾É½Ó¿ÚÁÐ±í¡£
         run: |
           API_CONTRACT_BASE=$(git describe --tags --match 'v[0-9]*' --abbrev=0 HEAD^)
           pnpm run api:check --base "$API_CONTRACT_BASE"
@@ -162,12 +139,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y strace
       - name: Test all kernel packages
-        # æµ‹è¯•å¤±è´¥åªè®°å½•ç»“æžœï¼Œä¸é˜»å¡žåŽç»­å‘å¸ƒæž„å»ºã€‚
+        # ²âÊÔÊ§°ÜÖ»¼ÇÂ¼½á¹û£¬²»×èÈûºóÐø·¢²¼¹¹½¨¡£
         continue-on-error: true
         run: go test -tags "fts5 sqlcipher" ./... -count=1
         working-directory: kernel
       - name: Test path fixtures with custom temporary directories
-        # æµ‹è¯•å¤±è´¥åªè®°å½•ç»“æžœï¼Œä¸é˜»å¡žåŽç»­å‘å¸ƒæž„å»ºã€‚
+        # ²âÊÔÊ§°ÜÖ»¼ÇÂ¼½á¹û£¬²»×èÈûºóÐø·¢²¼¹¹½¨¡£
         continue-on-error: true
         run: go test -tags "fts5 sqlcipher" ./internal/testutil ./util ./model ./server -run 'Test(PublicDataDir|IsSensitivePath|.*Obsidian|RegisterStaticFileHandlers|StaticFile|WidgetResponseCacheControl|TemplatesAndExportRequireAdministrator|SnippetPublishAccess|PluginPublish|PublishFile)' -count=1
         working-directory: kernel
@@ -193,7 +170,7 @@ jobs:
         run: pnpm install --frozen-lockfile
         working-directory: app
       - name: Test frontend, Electron and packaging scripts
-        # æµ‹è¯•å¤±è´¥åªè®°å½•ç»“æžœï¼Œä¸é˜»å¡žåŽç»­å‘å¸ƒæž„å»ºã€‚
+        # ²âÊÔÊ§°ÜÖ»¼ÇÂ¼½á¹û£¬²»×èÈûºóÐø·¢²¼¹¹½¨¡£
         continue-on-error: true
         run: pnpm test
         working-directory: app
@@ -349,8 +326,8 @@ jobs:
         shell: bash
         run: |
           pnpm run typecheck
-          # æ¯ä¸ª E2E job åªé…ç½®è‡ªå·±çš„ shardï¼Œæ ¡éªŒè„šæœ¬éœ€è¦å…¨é‡ shard åˆ—è¡¨
-          # æ‰èƒ½éªŒè¯ä¸‰ä¸ª shard çš„å¹¶é›†è¦†ç›–å…¨éƒ¨æµ‹è¯•ä¸”æ— é‡å¤
+          # Ã¿¸ö E2E job Ö»ÅäÖÃ×Ô¼ºµÄ shard£¬Ð£Ñé½Å±¾ÐèÒªÈ«Á¿ shard ÁÐ±í
+          # ²ÅÄÜÑéÖ¤Èý¸ö shard µÄ²¢¼¯¸²¸ÇÈ«²¿²âÊÔÇÒÎÞÖØ¸´
           unset SIYUAN_E2E_SHARDS
           pnpm run test:shards
         working-directory: ${{ github.workspace }}/siyuan-testing
@@ -423,8 +400,8 @@ jobs:
             shard="${shard_config%:*}"
             port="${shard_config#*:}"
             (
-              # UI æµ‹è¯•å…±äº«åŒä¸€å†…æ ¸åŠå…¨å±€ç•Œé¢çŠ¶æ€ï¼Œå¿…é¡»ä¸²è¡Œè¿è¡Œ
-              # ä¸²è¡Œæ‰§è¡Œä¿ç•™ 25 åˆ†é’Ÿæ€»æ—¶é™ï¼Œå¤–å±‚æ­¥éª¤ä»ç”± 30 åˆ†é’Ÿè¶…æ—¶ä¿æŠ¤
+              # UI ²âÊÔ¹²ÏíÍ¬Ò»ÄÚºË¼°È«¾Ö½çÃæ×´Ì¬£¬±ØÐë´®ÐÐÔËÐÐ
+              # ´®ÐÐÖ´ÐÐ±£Áô 25 ·ÖÖÓ×ÜÊ±ÏÞ£¬Íâ²ã²½ÖèÈÔÓÉ 30 ·ÖÖÓ³¬Ê±±£»¤
               SIYUAN_BASE_URL="http://127.0.0.1:${port}" \
               SIYUAN_E2E_SHARD="${shard}" \
               SIYUAN_TEST_RESULTS_DIR="test-results-${shard}" \
@@ -547,7 +524,7 @@ jobs:
   build_android:
     runs-on: ubuntu-24.04
     name: ubuntu build android.apk
-    # æµ‹è¯•é€šè¿‡åŽå¹¶è¡Œæ‰§è¡Œ Android å’Œæ¡Œé¢æž„å»ºï¼Œå…¨éƒ¨æˆåŠŸåŽæ±‡æ€»äº§ç‰©å¹¶åˆ›å»ºå‘å¸ƒã€‚
+    # ²âÊÔÍ¨¹ýºó²¢ÐÐÖ´ÐÐ Android ºÍ×ÀÃæ¹¹½¨£¬È«²¿³É¹¦ºó»ã×Ü²úÎï²¢´´½¨·¢²¼¡£
     needs: [prepare, languages, contracts, frontend-tests]
     steps:
       - name: Checkout code
@@ -594,9 +571,9 @@ jobs:
           java-version: "21"
 
       - name: Set up Android NDK
-        # é”å®š NDK r28b(ä¸Žæœ¬åœ°å¼€å‘çŽ¯å¢ƒåŒç‰ˆæœ¬)ã€‚sdkmanager ä¸åœ¨ PATH ä¸Š
-        # (actions/runner-images#13674),ç”¨å…¨è·¯å¾„è°ƒç”¨;åŒæ—¶é¢„æŽ¥å— SDK è®¸å¯,
-        # é¿å… NDK å®‰è£…å¡åœ¨äº¤äº’å¼è®¸å¯ç¡®è®¤ã€‚
+        # Ëø¶¨ NDK r28b(Óë±¾µØ¿ª·¢»·¾³Í¬°æ±¾)¡£sdkmanager ²»ÔÚ PATH ÉÏ
+        # (actions/runner-images#13674),ÓÃÈ«Â·¾¶µ÷ÓÃ;Í¬Ê±Ô¤½ÓÊÜ SDK Ðí¿É,
+        # ±ÜÃâ NDK °²×°¿¨ÔÚ½»»¥Ê½Ðí¿ÉÈ·ÈÏ¡£
         run: |
           SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           if [ ! -x "$SDKMANAGER" ]; then
@@ -615,9 +592,9 @@ jobs:
           echo "Installed NDK r28b at $NDK_DIR"
 
       - name: Set up gomobile
-        # é”å®šåˆ° kernel/go.mod ä¸­ x/mobile æ¨¡å—çš„åŒä¸€ç‰ˆæœ¬,é¿å…å·¥å…·ä¸Žåº“ç‰ˆæœ¬æ¼‚ç§»ã€‚
-        # GOPATH è¢«æ˜¾å¼æŒ‡å‘ workspace ä¸‹,go install çš„äº§ç‰©åœ¨ $GOPATH/bin,
-        # è¯¥ç›®å½•ä¸åœ¨é»˜è®¤ PATH ä¸Š,éœ€ç”¨å…¨è·¯å¾„è°ƒç”¨å¹¶å†™å…¥ $GITHUB_PATH ä¾›åŽç»­æ­¥éª¤ä½¿ç”¨ã€‚
+        # Ëø¶¨µ½ kernel/go.mod ÖÐ x/mobile Ä£¿éµÄÍ¬Ò»°æ±¾,±ÜÃâ¹¤¾ßÓë¿â°æ±¾Æ¯ÒÆ¡£
+        # GOPATH ±»ÏÔÊ½Ö¸Ïò workspace ÏÂ,go install µÄ²úÎïÔÚ $GOPATH/bin,
+        # ¸ÃÄ¿Â¼²»ÔÚÄ¬ÈÏ PATH ÉÏ,ÐèÓÃÈ«Â·¾¶µ÷ÓÃ²¢Ð´Èë $GITHUB_PATH ¹©ºóÐø²½ÖèÊ¹ÓÃ¡£
         run: |
           go install golang.org/x/mobile/cmd/gomobile@2553ed8ce294
           echo "$GOPATH/bin" >> $GITHUB_PATH
@@ -641,9 +618,9 @@ jobs:
           path: ${{ github.workspace }}/siyuan-android
 
       - name: Patch siyuan-android Repositories
-        # siyuan-android é»˜è®¤æŠŠé˜¿é‡Œäº‘é•œåƒæŽ’åœ¨æœ€å‰,æŸäº›ä¾èµ–(å¦‚ org.apache:apache:31)
-        # åœ¨é˜¿é‡Œäº‘é•œåƒç¼ºå¤±ä¼šå¯¼è‡´è§£æžå¤±è´¥ã€‚CI åœ¨æµ·å¤–,ç›´æŽ¥èµ° google()/mavenCentral()
-        # æ›´ç¨³;sed åˆ é™¤æ‰€æœ‰ maven.aliyun.com è¡Œ,ä¿ç•™å®˜æ–¹ä»“åº“ã€‚
+        # siyuan-android Ä¬ÈÏ°Ñ°¢ÀïÔÆ¾µÏñÅÅÔÚ×îÇ°,Ä³Ð©ÒÀÀµ(Èç org.apache:apache:31)
+        # ÔÚ°¢ÀïÔÆ¾µÏñÈ±Ê§»áµ¼ÖÂ½âÎöÊ§°Ü¡£CI ÔÚº£Íâ,Ö±½Ó×ß google()/mavenCentral()
+        # ¸üÎÈ;sed É¾³ýËùÓÐ maven.aliyun.com ÐÐ,±£Áô¹Ù·½²Ö¿â¡£
         run: |
           sed -i '/maven.aliyun.com/d' build.gradle
           echo "=== Patched build.gradle repositories ==="
@@ -684,10 +661,10 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
       - name: Building Android App
-        # local.properties è¢« siyuan-android çš„ .gitignore å¿½ç•¥,CI é‡Œéœ€çŽ°åœºç”Ÿæˆ,
-        # å¦åˆ™ Gradle æŠ¥ "SDK location not found";gradlew ä¹Ÿéœ€æ˜¾å¼åŠ å¯æ‰§è¡Œæƒé™ã€‚
-        # äº§ç‰©é‡å‘½åä¸ºå¸¦ç‰ˆæœ¬å·çš„å›ºå®šå,ç¡®ä¿ä¸‹è½½æ–‡ä»¶åæ­£ç¡®(GitHub Release çš„ä¸‹è½½å
-        # å–å†³äºŽä¸Šä¼ æ—¶çš„æœ¬åœ°æ–‡ä»¶å,# è¯­æ³•åªæ”¹æ˜¾ç¤ºæ ‡ç­¾)ã€‚
+        # local.properties ±» siyuan-android µÄ .gitignore ºöÂÔ,CI ÀïÐèÏÖ³¡Éú³É,
+        # ·ñÔò Gradle ±¨ "SDK location not found";gradlew Ò²ÐèÏÔÊ½¼Ó¿ÉÖ´ÐÐÈ¨ÏÞ¡£
+        # ²úÎïÖØÃüÃûÎª´ø°æ±¾ºÅµÄ¹Ì¶¨Ãû,È·±£ÏÂÔØÎÄ¼þÃûÕýÈ·(GitHub Release µÄÏÂÔØÃû
+        # È¡¾öÓÚÉÏ´«Ê±µÄ±¾µØÎÄ¼þÃû,# Óï·¨Ö»¸ÄÏÔÊ¾±êÇ©)¡£
         run: |
           echo "sdk.dir=$ANDROID_HOME" > local.properties
           chmod +x ./gradlew
