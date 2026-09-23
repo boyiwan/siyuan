@@ -27,6 +27,11 @@ jobs:
             goarch: "amd64"
             electron_args: "dist-linux"
             need_mingw: false
+            artifacts: |
+              siyuan-*-linux.AppImage
+              siyuan-*-linux.tar.gz
+              siyuan-*-linux.deb
+              siyuan-*-linux.rpm
           - os: macos-latest
             name: mac.dmg
             kernel_path: "kernel-darwin/SiYuan-Kernel"
@@ -34,6 +39,8 @@ jobs:
             goarch: "amd64"
             electron_args: "dist-darwin"
             need_mingw: false
+            artifacts: |
+              siyuan-*-mac.dmg
           - os: macos-latest
             name: mac-arm64.dmg
             kernel_path: "kernel-darwin-arm64/SiYuan-Kernel"
@@ -41,6 +48,8 @@ jobs:
             goarch: "arm64"
             electron_args: "dist-darwin-arm64"
             need_mingw: false
+            artifacts: |
+              siyuan-*-mac-arm64.dmg
           - os: windows-latest
             name: win.exe
             kernel_path: "kernel/SiYuan-Kernel.exe"
@@ -48,6 +57,8 @@ jobs:
             goarch: "amd64"
             electron_args: "dist"
             need_mingw: true
+            artifacts: |
+              siyuan-*-win.exe
 
     steps:
       - uses: actions/checkout@v6
@@ -134,5 +145,6 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: release-desktop-${{ matrix.config.name }}
-          path: app/build/*
+          path: |
+            ${{ github.workspace }}/app/build/${{ matrix.config.artifacts }}
           if-no-files-found: error
